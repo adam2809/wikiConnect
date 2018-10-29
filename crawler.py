@@ -1,6 +1,8 @@
 from bs4 import BeautifulSoup
 import requests
 
+from sys import argv
+
 printCountFreq = 30
 
 def getIDfromHref(href):
@@ -46,5 +48,8 @@ def crawl(start):
             if href[:6] == '/wiki/':
                 stack.append(href)
 
-
-crawl('/wiki/Adolf_Hitler')
+try:
+    start = argv[1]
+except IndexError:
+    start = '/wiki/Python_(programming_language)'
+crawl(start)
