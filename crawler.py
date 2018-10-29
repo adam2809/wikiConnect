@@ -1,14 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 
-# https://en.wikipedia.org/wiki?curid=
-visitedHrefs = set()
-# toExclude = (('/Special:BookSources/',3),
-#              (3),
-#              (3))
-toExclude = ['Template:','Template_talk:','Category:',
-             'Wikipedia:','Special:','Help:',
-             'Portal:',]
+printCountFreq = 30
 
 def getIDfromHref(href):
     href = bytearray(href,'utf-8')
@@ -21,34 +14,37 @@ def getIDfromHref(href):
     return res
 
 
-def isValidArticleHref(href):
-    if href[:6]!='/wiki/' or ':' in href:
-        return False
-    return True
-
-
-
-def crawl(href):
-    print(f'Went into: {href}')
-    visitedHrefs.add(href)
-    html = requests.get(f'https://en.wikipedia.org{href}').content.decode()
-    soup = BeautifulSoup(html,'lxml')
-    try:
-        id = getIDfromHref(soup.find('li',{'id':'t-wikibase'}).a['href'])
-    except AttributeError:
-        print(f'AttributeError ocurred in: {href}')
-        return
-    if not id:
-        print(f'Id not found in: {href}')
-        return
-    print(f'Article ID: {id}')
-    for a in soup.findAll('a',href=True):
-        link = a['href']
-        if link in visitedHrefs:
-            print(f'Omitting alredy visited {link}')
+def crawl(start):
+    stack = []
+    stack.append(start)
+    visitedHrefs = set()
+    count = 0
+    while stack:
+        if count == printCountFreq:
+            print('Visited %d articles' % len(visitedHrefs))
+            count = 0
+        count += 1
+        curr = stack.pop()
+        print(f'Went into: {curr}')
+        visitedHrefs.add(curr)
+        html = requests.get(f'https://en.wikipedia.org{curr}').content.decode()
+        soup = BeautifulSoup(html,'lxml')
+        try:
+            id = getIDfromHref(soup.find('li',{'id':'t-wikibase'}).a['href'])
+        except AttributeError:
+            print(f'AttributeError ocurred in: {curr}')
             continue
-        if link[:6] == '/wiki/':
-            crawl(link)
+        if not id:
+            print(f'Id not found in: {curr}')
+            continue
+        print(f'Article ID: {id}')
+        for a in soup.findAll('a',href=True):
+            href = a['href']
+            if href in visitedHrefs:
+                print(f'Omitting alredy visited {href}')
+                continue
+            if href[:6] == '/wiki/':
+                stack.append(href)
 
 
 crawl('/wiki/Adolf_Hitler')
